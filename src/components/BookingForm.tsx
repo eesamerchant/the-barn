@@ -31,6 +31,7 @@ export default function BookingForm({
 
   const hours = endHour - startHour;
   const baseTotal = hours * space.hourly_rate;
+  const depositPercentage = 50; // default
 
   useEffect(() => {
     const loadAddOns = async () => {
@@ -124,8 +125,6 @@ export default function BookingForm({
 
   const subtotal = baseTotal + addOnsTotal;
   const total = subtotal - discountAmount;
-  const { data: settingsData } = useState<any>(null);
-  const depositPercentage = 50; // default
 
   const depositAmount = Math.round(total * (depositPercentage / 100) * 100) / 100;
 
@@ -386,3 +385,4 @@ export default function BookingForm({
     </form>
   );
 }
+                                                      
