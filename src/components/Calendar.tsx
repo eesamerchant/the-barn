@@ -94,7 +94,7 @@ export default function Calendar() {
   };
 
   return (
-    <div className="max-w-lg mx-auto" style={{ animation: 'slideUp 0.4s ease-out 0.1s both' }}>
+    <div className="w-full" style={{ animation: 'slideUp 0.4s ease-out 0.1s both' }}>
       {/* Calendar */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {/* Month nav */}
@@ -133,13 +133,13 @@ export default function Calendar() {
                     ${avail
                       ? sel
                         ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 scale-105'
-                        : 'text-slate-900 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
+                        : isT ? 'bg-cyan-100 text-cyan-700 ring-2 ring-cyan-500 font-bold hover:bg-cyan-200 cursor-pointer' : 'text-slate-900 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
                       : 'text-slate-300 cursor-default'
                     }
                   `}
                 >
                   {date.getDate()}
-                  {isT && !sel && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-500" />}
+                  
                 </button>
               );
             })}
@@ -150,6 +150,7 @@ export default function Calendar() {
         <div className="px-4 py-2.5 border-t border-slate-100 flex gap-5 text-[10px] text-slate-400">
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-500" /> Available</span>
           <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-200" /> Unavailable</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-100 ring-1 ring-cyan-500" /> Today</span>
         </div>
       </div>
 
