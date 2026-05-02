@@ -13,46 +13,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50">
+      <body className="bg-[#f8fafc]">
         <div className="min-h-screen flex flex-col">
-          <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 animate-fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl sm:text-4xl">🏀</span>
-                <div>
-                  <h1 className="text-3xl sm:text-4xl font-bold text-primary">The Barn</h1>
-                  <p className="text-gray-600 text-sm mt-0.5">Basketball & Pickleball Court</p>
-                </div>
+          <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
+            <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white text-lg font-bold shadow-md shadow-cyan-500/20">
+                B
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 leading-tight">The Barn</h1>
+                <p className="text-xs text-slate-500">Basketball & Pickleball Court</p>
               </div>
             </div>
           </header>
-          <main className="flex-1 animate-fade-in">
+          <main className="flex-1">
             {children}
           </main>
-          <footer className="bg-gradient-to-t from-gray-100 to-white border-t border-gray-200 mt-12 sm:mt-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
-              <div className="grid md:grid-cols-3 gap-8 mb-8">
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Hours</h3>
-                  <p className="text-gray-600 text-sm">Mon-Fri: 6am - 11pm</p>
-                  <p className="text-gray-600 text-sm">Weekends: 8am - 11pm</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Contact</h3>
-                  <p className="text-gray-600 text-sm">E-Transfer Payment</p>
-                  <p className="text-gray-600 text-sm">Quick & Secure</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Courts</h3>
-                  <p className="text-gray-600 text-sm">Basketball & Pickleball</p>
-                  <p className="text-gray-600 text-sm">Professional Grade</p>
-                </div>
-              </div>
-              <div className="border-t border-gray-200 pt-8 text-center">
-                <p className="text-gray-600 text-sm">
-                  © {new Date().getFullYear()} The Barn. All rights reserved.
-                </p>
-              </div>
+          <footer className="border-t border-slate-200/60 bg-white mt-16">
+            <div className="max-w-5xl mx-auto px-6 py-8 text-center">
+              <p className="text-sm text-slate-400">
+                &copy; 2026 The Barn. All rights reserved.
+              </p>
             </div>
           </footer>
         </div>

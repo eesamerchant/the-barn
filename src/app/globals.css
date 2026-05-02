@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #1a2332;
-  --color-secondary: #0ea5e9;
-  --color-accent: #f97316;
-  --color-bg: #fafafa;
+  --color-primary: #0f172a;
+  --color-secondary: #0891b2;
+  --color-accent: #06b6d4;
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
 }
 
@@ -19,122 +19,36 @@ html {
 }
 
 body {
-  background-color: #fafafa;
-  color: #1a2332;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(6, 182, 212, 0);
-  }
-}
-
-@layer base {
-  h1 {
-    @apply text-4xl font-bold tracking-tight text-primary;
-  }
-
-  h2 {
-    @apply text-2xl font-bold text-primary;
-  }
-
-  h3 {
-    @apply text-xl font-semibold text-primary;
-  }
-
-  button {
-    @apply transition-all duration-200;
-  }
-
-  input,
-  textarea,
-  select {
-    @apply transition-colors duration-200;
-  }
+  from { opacity: 0; transform: translateY(-8px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 2000px; }
 }
 
 @layer components {
-  .card {
-    @apply rounded-lg bg-white p-6 shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-lg hover:border-gray-200;
-  }
-
-  .btn-primary {
-    @apply rounded-lg bg-secondary hover:bg-blue-600 text-white font-semibold px-6 py-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
-  }
-
-  .btn-secondary {
-    @apply rounded-lg bg-gray-200 hover:bg-gray-300 text-primary font-semibold px-6 py-3 transition-all duration-200 hover:shadow-md;
-  }
-
-  .btn-accent {
-    @apply rounded-lg bg-accent hover:bg-orange-500 text-white font-semibold px-6 py-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
-  }
-
-  .input-field {
-    @apply w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-primary placeholder-gray-400 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20 transition-all duration-200;
-  }
-
-  .checkbox {
-    @apply h-5 w-5 rounded border-gray-300 text-secondary focus:ring-secondary cursor-pointer transition-all duration-200;
-  }
-
   .animate-fade-in {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 0.4s ease-out;
   }
-
   .animate-slide-up {
-    animation: slideUp 0.5s ease-out;
+    animation: slideUp 0.5s ease-out both;
   }
-
   .animate-slide-down {
-    animation: slideDown 0.3s ease-out;
-  }
-
-  .animate-pulse-glow {
-    animation: pulse-glow 2s infinite;
+    animation: slideDown 0.4s ease-out both;
   }
 }
