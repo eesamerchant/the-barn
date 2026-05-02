@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-interface HourlySlot {
+interface HourSlot {
   hour: number;
   booked: boolean;
 }
@@ -27,9 +27,8 @@ export default function Calendar() {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Inline slot picker state
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [hourlySlots, setHourlySlots] = useState<HourlySlot[]>([]);
+  const [slots, setSlots] = useState<HourSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [startHour, setStartHour] = useState<number | null>(null);
   const [endHour, setEndHour] = useState<number | null>(null);
@@ -40,22 +39,13 @@ export default function Calendar() {
       try {
         const ms = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
         const me = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-
-        const [{ data: avail }, { data: bookings }] = await Promise.all([
-          supabase.from('availability').select('date, is_available').gte('date', ms).lte('date', me),
-          supabase.from('bookings').select('date').gte('date', ms).lte('date', me).in('status', ['pending', 'confirmed']),
-        ]);
-
+        const { data: avail } = await supabase
+          .from('availability').select('date, is_available').gte('date', ms).lte('date', me);
         const available = new Set<string>();
         avail?.forEach((a) => { if (a.is_available) available.add(a.date); });
-
-        // Only mark fully booked dates — we'll check hourly later
         setAvailableDates(available);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     };
     load();
   }, [currentMonth]);
@@ -69,113 +59,79 @@ export default function Calendar() {
         supabase.from('availability').select('start_hour, end_hour').eq('date', dateStr).single(),
         supabase.from('bookings').select('start_hour, end_hour').eq('date', dateStr).in('status', ['pending', 'confirmed']),
       ]);
-
       const s = av?.start_hour ?? 6;
       const e = av?.end_hour ?? 23;
-      const bookedSet = new Set<number>();
-      bk?.forEach((b) => { for (let h = b.start_hour; h < b.end_hour; h++) bookedSet.add(h); });
-
-      const slots: HourlySlot[] = [];
-      for (let h = s; h < e; h++) slots.push({ hour: h, booked: bookedSet.has(h) });
-      setHourlySlots(slots);
-    } catch {
-      setHourlySlots([]);
-    } finally {
-      setLoadingSlots(false);
-    }
+      const booked = new Set<number>();
+      bk?.forEach((b) => { for (let h = b.start_hour; h < b.end_hour; h++) booked.add(h); });
+      const result: HourSlot[] = [];
+      for (let h = s; h < e; h++) result.push({ hour: h, booked: booked.has(h) });
+      setSlots(result);
+    } catch { setSlots([]); }
+    finally { setLoadingSlots(false); }
   };
 
-  const handleDateClick = (dateStr: string) => {
-    if (selectedDate === dateStr) {
-      setSelectedDate(null);
-      setHourlySlots([]);
-      return;
-    }
-    setSelectedDate(dateStr);
-    loadSlots(dateStr);
+  const handleDateClick = (ds: string) => {
+    if (selectedDate === ds) { setSelectedDate(null); return; }
+    setSelectedDate(ds);
+    loadSlots(ds);
   };
 
-  const handleHourClick = (hour: number) => {
-    if (startHour === null) {
-      setStartHour(hour);
-      setEndHour(hour + 1);
-    } else if (hour < startHour) {
-      setStartHour(hour);
-    } else {
-      setEndHour(hour + 1);
-    }
+  const handleHourClick = (h: number) => {
+    if (startHour === null) { setStartHour(h); setEndHour(h + 1); }
+    else if (h < startHour) { setStartHour(h); }
+    else { setEndHour(h + 1); }
   };
 
   const today = startOfDay(new Date());
   const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
-  const firstDayPad = getDay(startOfMonth(currentMonth));
+  const pad = getDay(startOfMonth(currentMonth));
   const duration = startHour !== null && endHour !== null ? endHour - startHour : 0;
 
-  const formatHour = (h: number) => {
-    const suffix = h >= 12 ? 'PM' : 'AM';
-    const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return `${display}:00 ${suffix}`;
+  const fmtHour = (h: number) => {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const d = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${d}:00 ${ampm}`;
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Calendar Card */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="max-w-lg mx-auto" style={{ animation: 'slideUp 0.4s ease-out 0.1s both' }}>
+      {/* Calendar */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {/* Month nav */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <button
-            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors text-lg"
-          >
-            &#8249;
-          </button>
-          <h3 className="text-lg font-semibold text-slate-900">
-            {format(currentMonth, 'MMMM yyyy')}
-          </h3>
-          <button
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors text-lg"
-          >
-            &#8250;
-          </button>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">&#8249;</button>
+          <h3 className="text-sm font-semibold text-slate-900">{format(currentMonth, 'MMMM yyyy')}</h3>
+          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">&#8250;</button>
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 px-4 pt-4">
-          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
-            <div key={d} className="text-center text-xs font-semibold text-slate-400 py-2">
-              {d}
-            </div>
+        <div className="grid grid-cols-7 px-3 pt-3">
+          {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => (
+            <div key={d} className="text-center text-[10px] font-semibold text-slate-300 uppercase py-1">{d}</div>
           ))}
         </div>
 
-        {/* Day grid */}
+        {/* Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-6 w-6 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
+          <div className="flex justify-center py-16">
+            <div className="h-5 w-5 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-7 px-4 pb-4 gap-1">
-            {/* Empty padding cells */}
-            {Array.from({ length: firstDayPad }).map((_, i) => (
-              <div key={`pad-${i}`} className="aspect-square" />
-            ))}
-
+          <div className="grid grid-cols-7 gap-1 px-3 pb-3">
+            {Array.from({ length: pad }).map((_, i) => <div key={`p-${i}`} />)}
             {days.map((date) => {
-              const dateStr = format(date, 'yyyy-MM-dd');
-              const isPast = isBefore(date, today);
-              const available = !isPast && availableDates.has(dateStr);
-              const isSelected = selectedDate === dateStr;
-              const isTodayDate = isToday(date);
-
+              const ds = format(date, 'yyyy-MM-dd');
+              const avail = !isBefore(date, today) && availableDates.has(ds);
+              const sel = selectedDate === ds;
+              const isT = isToday(date);
               return (
                 <button
-                  key={dateStr}
-                  disabled={!available}
-                  onClick={() => handleDateClick(dateStr)}
-                  className={`aspect-square rounded-xl text-sm font-medium flex items-center justify-center transition-all duration-200 relative
-                    ${available
-                      ? isSelected
+                  key={ds}
+                  disabled={!avail}
+                  onClick={() => handleDateClick(ds)}
+                  className={`aspect-square rounded-xl text-xs font-medium flex items-center justify-center relative transition-all duration-150
+                    ${avail
+                      ? sel
                         ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 scale-105'
                         : 'text-slate-900 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
                       : 'text-slate-300 cursor-default'
@@ -183,9 +139,7 @@ export default function Calendar() {
                   `}
                 >
                   {date.getDate()}
-                  {isTodayDate && !isSelected && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-500" />
-                  )}
+                  {isT && !sel && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-500" />}
                 </button>
               );
             })}
@@ -193,100 +147,70 @@ export default function Calendar() {
         )}
 
         {/* Legend */}
-        <div className="px-6 py-3 border-t border-slate-100 flex gap-5 text-xs text-slate-400">
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" /> Available
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-200" /> Unavailable
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="absolute-dot w-1.5 h-1.5 rounded-full bg-cyan-500 ring-2 ring-cyan-200" /> Today
-          </span>
+        <div className="px-4 py-2.5 border-t border-slate-100 flex gap-5 text-[10px] text-slate-400">
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-500" /> Available</span>
+          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-200" /> Unavailable</span>
         </div>
       </div>
 
-      {/* Hourly Slots Panel */}
+      {/* Hourly slots */}
       {selectedDate && (
-        <div className="mt-6 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-slide-down">
-          {/* Panel header */}
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="mt-4 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm" style={{ animation: 'slideDown 0.3s ease-out' }}>
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h4 className="font-semibold text-slate-900">
+              <h4 className="text-sm font-semibold text-slate-900">
                 {format(new Date(selectedDate + 'T12:00:00'), 'EEEE, MMMM d')}
               </h4>
-              <p className="text-xs text-slate-400 mt-0.5">Tap hours to select your time</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Tap hours to select your time</p>
             </div>
-            <button
-              onClick={() => { setSelectedDate(null); setHourlySlots([]); }}
-              className="text-slate-400 hover:text-slate-600 text-lg leading-none px-1"
-            >
-              &times;
-            </button>
+            <button onClick={() => setSelectedDate(null)} className="text-slate-400 hover:text-slate-600 text-lg px-1">&times;</button>
           </div>
 
           {loadingSlots ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
+            <div className="flex justify-center py-10">
+              <div className="h-5 w-5 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
             </div>
           ) : (
-            <div className="p-4 space-y-1.5">
-              {hourlySlots.map((slot) => {
-                const inRange =
-                  startHour !== null &&
-                  endHour !== null &&
-                  slot.hour >= startHour &&
-                  slot.hour < endHour;
-
+            <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {slots.map((slot) => {
+                const inRange = startHour !== null && endHour !== null && slot.hour >= startHour && slot.hour < endHour;
                 return (
                   <button
                     key={slot.hour}
                     disabled={slot.booked}
                     onClick={() => handleHourClick(slot.hour)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150
+                    className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-center
                       ${slot.booked
-                        ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                        ? 'bg-slate-50 text-slate-300 cursor-not-allowed line-through'
                         : inRange
-                          ? 'bg-cyan-500 text-white shadow-sm'
-                          : 'bg-slate-50 text-slate-700 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
+                          ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/20'
+                          : 'bg-slate-50 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
                       }
                     `}
                   >
-                    <span>{formatHour(slot.hour)} – {formatHour(slot.hour + 1)}</span>
-                    {slot.booked && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200 text-slate-500">Booked</span>
-                    )}
-                    {inRange && !slot.booked && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/20 text-white">Selected</span>
-                    )}
+                    {fmtHour(slot.hour)}
+                    {slot.booked && <span className="block text-[9px] mt-0.5" style={{ textDecoration: 'none' }}>Booked</span>}
                   </button>
                 );
               })}
             </div>
           )}
 
-          {/* Summary + Continue */}
-          <div className="px-6 py-4 border-t border-slate-100">
+          {/* Summary + continue */}
+          <div className="px-5 py-3 border-t border-slate-100">
             {duration > 0 ? (
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-slate-500">
-                  {formatHour(startHour!)} – {formatHour(endHour!)}
-                  <span className="ml-2 font-semibold text-slate-900">{duration}h</span>
-                </p>
-              </div>
+              <p className="text-xs text-slate-500 mb-2">
+                {fmtHour(startHour!)} – {fmtHour(endHour!)} &middot; <span className="text-slate-900 font-semibold">{duration}h</span>
+              </p>
             ) : (
-              <p className="text-sm text-slate-400 mb-3">No time selected yet</p>
+              <p className="text-xs text-slate-400 mb-2">No time selected</p>
             )}
             <button
               disabled={duration === 0}
-              onClick={() => {
-                if (selectedDate && startHour !== null && endHour !== null) {
-                  router.push(`/book/${selectedDate}?start=${startHour}&end=${endHour}`);
-                }
-              }}
-              className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200
+              onClick={() => router.push(`/book/${selectedDate}?start=${startHour}&end=${endHour}`)}
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
                 ${duration > 0
-                  ? 'bg-cyan-500 text-white hover:bg-cyan-600 shadow-md shadow-cyan-500/20 hover:shadow-lg'
+                  ? 'bg-cyan-500 text-white hover:bg-cyan-600 shadow-md shadow-cyan-500/20'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 }
               `}
