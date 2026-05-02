@@ -9,7 +9,7 @@ export default function BookingConfirmationPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [space, setSpace] = useState<Space | null>(null);
+  const [_space, setSpace] = useState<Space | null>(null);
   const [addOns, setAddOns] = useState<(BookingAddOn & { add_on: AddOn })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
