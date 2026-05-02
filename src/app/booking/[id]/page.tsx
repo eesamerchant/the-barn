@@ -1,17 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { format, parse } from 'date-fns';
 import { supabase, type Booking, type Space, type BookingAddOn, type AddOn } from '@/lib/supabase';
 
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function BookingConfirmationPage({ params }: PageProps) {
+export default function BookingConfirmationPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const [booking, setBooking] = useState<Booking | null>(null);
   const [space, setSpace] = useState<Space | null>(null);

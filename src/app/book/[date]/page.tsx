@@ -1,19 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { format, parse } from 'date-fns';
 import TimeSlotPicker from '@/components/TimeSlotPicker';
 import BookingForm from '@/components/BookingForm';
 import { supabase, type Space } from '@/lib/supabase';
 
-interface PageProps {
-  params: {
-    date: string;
-  };
-}
-
-export default function BookPage({ params }: PageProps) {
+export default function BookPage() {
+  const params = useParams<{ date: string }>();
   const router = useRouter();
   const [space, setSpace] = useState<Space | null>(null);
   const [selectedTime, setSelectedTime] = useState<{
