@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #1a2332;
+  --color-secondary: #0ea5e9;
+  --color-accent: #f97316;
+  --color-bg: #fafafa;
+  --color-surface: #ffffff;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -25,19 +33,7 @@ code {
     monospace;
 }
 
-/* Tailwind custom config applied via globals */
 @layer base {
-  :root {
-    --color-primary: #1a2332;
-    --color-secondary: #0ea5e9;
-    --color-accent: #f97316;
-    --color-bg: #fafafa;
-    --color-surface: #ffffff;
-    --color-border: #e5e7eb;
-    --color-text: #1a2332;
-    --color-text-light: #6b7280;
-  }
-
   h1 {
     @apply text-4xl font-bold tracking-tight text-primary;
   }
@@ -79,7 +75,7 @@ code {
   }
 
   .input-field {
-    @apply w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-primary placeholder-gray-400 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-20;
+    @apply w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-primary placeholder-gray-400 focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20;
   }
 
   .checkbox {
