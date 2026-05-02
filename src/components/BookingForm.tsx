@@ -31,7 +31,7 @@ export default function BookingForm({
 
   const hours = endHour - startHour;
   const baseTotal = hours * space.hourly_rate;
-  const depositPercentage = 50; // default
+  const [depositPercentage, setDepositPercentage] = useState(50);
 
   useEffect(() => {
     const loadAddOns = async () => {
@@ -51,6 +51,25 @@ export default function BookingForm({
     };
 
     loadAddOns();
+
+    // Fetch deposit percentage from settings
+    const loadSettings = async () => {
+      try {
+        const { data: settingsData } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'deposit_percentage')
+          .single();
+
+        if (settingsData?.value?.deposit_percentage) {
+          setDepositPercentage(settingsData.value.deposit_percentage);
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+      }
+    };
+
+    loadSettings();
   }, [space.id]);
 
   const handleAddOnToggle = (addOnId: string) => {
