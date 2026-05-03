@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, type Availability, type Booking } from '@/lib/supabase';
 
@@ -14,17 +14,25 @@ const ROW_HEIGHT = 56;
 
 export default function Calendar() {
   const router = useRouter();
-  const now = new Date();
-  const [month, setMonth] = useState(now.getMonth());
-  const [year, setYear] = useState(now.getFullYear());
+  
+  // Stable today string — computed once on mount
+  const todayStr = useMemo(() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+  }, []);
+  const todayDate = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  }, []);
+
+  const [month, setMonth] = useState(() => new Date().getMonth());
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Availability[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [startHour, setStartHour] = useState<number | null>(null);
   const [endHour, setEndHour] = useState<number | null>(null);
-
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   // Calendar grid
   const firstDay = new Date(year, month, 1).getDay();
@@ -48,8 +56,7 @@ export default function Calendar() {
 
   const isPast = (day: number) => {
     const d = new Date(year, month, day);
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return d < today;
+    return d < todayDate;
   };
 
   // Fetch slots
@@ -113,12 +120,11 @@ export default function Calendar() {
   const fmtHourShort = (h: number) => {
     const ampm = h >= 12 ? 'p.m.' : 'a.m.';
     const d = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return `${d}:00 ${ampm}`;
+    return `${d}:00 ${ampm}`;
   };
 
-  const hours = Array.from({ length: 17 }, (_, i) => i + 6); // 6 AM to 10 PM
+  const hours = Array.from({ length: 17 }, (_, i) => i + 6);
 
-  // Build booking blocks from raw bookings for visual rendering
   const bookingBlocks = bookings.map((b) => ({
     start: b.start_hour,
     end: b.end_hour,
@@ -190,7 +196,6 @@ export default function Calendar() {
       {/* Day Timeline View */}
       {selectedDate && (
         <div className="mt-4 bg-[#12121a] border border-[#2a2a3a] rounded-2xl overflow-hidden" style={{ animation: 'slideDown 0.3s ease-out' }}>
-          {/* Header */}
           <div className="px-5 py-3 border-b border-[#2a2a3a]/60 flex items-center justify-between">
             <div>
               <h4 className="text-sm font-semibold text-white">
@@ -210,10 +215,8 @@ export default function Calendar() {
           ) : (
             <div className="overflow-y-auto max-h-[420px] scrollbar-thin">
               <div className="relative" style={{ height: `${hours.length * ROW_HEIGHT}px` }}>
-                {/* Hour rows with grid lines */}
                 {hours.map((h, idx) => {
                   const open = hourOpen(h);
-                  const booked = isBooked(h);
                   const selected = inRange(h);
                   return (
                     <div
@@ -221,11 +224,9 @@ export default function Calendar() {
                       className="absolute w-full flex items-stretch"
                       style={{ top: `${idx * ROW_HEIGHT}px`, height: `${ROW_HEIGHT}px` }}
                     >
-                      {/* Time label */}
                       <div className="w-[76px] flex-shrink-0 flex items-start justify-end pr-3 pt-0">
                         <span className="text-[11px] text-[#6b6b80] -translate-y-[7px] font-medium tabular-nums">{fmtHour(h)}</span>
                       </div>
-                      {/* Timeline cell */}
                       <div className="flex-1 border-t border-[#2a2a3a]/40 relative">
                         {open && !selected && (
                           <button
@@ -244,17 +245,12 @@ export default function Calendar() {
                   );
                 })}
 
-                {/* Booking blocks overlay */}
                 {bookingBlocks.map((block, idx) => {
                   const topOffset = (block.start - hours[0]) * ROW_HEIGHT;
                   const height = (block.end - block.start) * ROW_HEIGHT;
                   if (topOffset < 0 || topOffset >= hours.length * ROW_HEIGHT) return null;
                   return (
-                    <div
-                      key={idx}
-                      className="absolute left-[76px] right-3 z-20 pointer-events-none"
-                      style={{ top: `${topOffset + 1}px`, height: `${height - 2}px` }}
-                    >
+                    <div key={idx} className="absolute left-[76px] right-3 z-20 pointer-events-none" style={{ top: `${topOffset + 1}px`, height: `${height - 2}px` }}>
                       <div className="h-full bg-cyan-500/[0.08] border-l-[3px] border-cyan-500 rounded-r-lg px-3 py-2 flex flex-col justify-center">
                         <div className="flex items-center gap-1.5">
                           <svg className="w-3 h-3 text-cyan-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -265,15 +261,8 @@ export default function Calendar() {
                   );
                 })}
 
-                {/* Selected range overlay */}
                 {startHour !== null && endHour !== null && (
-                  <div
-                    className="absolute left-[76px] right-3 z-15 pointer-events-none"
-                    style={{
-                      top: `${(startHour - hours[0]) * ROW_HEIGHT + 1}px`,
-                      height: `${(endHour - startHour) * ROW_HEIGHT - 2}px`,
-                    }}
-                  >
+                  <div className="absolute left-[76px] right-3 z-15 pointer-events-none" style={{ top: `${(startHour - hours[0]) * ROW_HEIGHT + 1}px`, height: `${(endHour - startHour) * ROW_HEIGHT - 2}px` }}>
                     <div className="h-full bg-cyan-500/[0.15] border-l-[3px] border-cyan-400 rounded-r-lg px-3 py-2 flex flex-col justify-center">
                       <span className="text-[11px] text-cyan-300 font-semibold">
                         {fmtHourShort(startHour)}–{fmtHourShort(endHour)} · {duration}h selected
@@ -285,7 +274,6 @@ export default function Calendar() {
             </div>
           )}
 
-          {/* Summary + CTA */}
           <div className="px-5 py-3 border-t border-[#2a2a3a]/60">
             {duration > 0 ? (
               <p className="text-xs text-[#6b6b80] mb-2">
@@ -297,9 +285,9 @@ export default function Calendar() {
             <button
               disabled={duration === 0}
               onClick={() => router.push(`/book/${selectedDate}?start=${startHour}&end=${endHour}`)}
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
+              className={`w-full py-3 rounded-full text-sm font-semibold transition-all duration-300
                 ${duration > 0
-                  ? 'bg-cyan-500 text-black hover:bg-cyan-400 shadow-md shadow-cyan-500/20'
+                  ? 'bg-cyan-500 text-black hover:bg-cyan-400 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/30 active:scale-[0.98] shadow-md shadow-cyan-500/20'
                   : 'bg-[#1a1a25] text-[#4a4a5a] cursor-not-allowed'
                 }
               `}
