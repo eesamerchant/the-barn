@@ -1,224 +1,275 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  format,
-  isBefore,
-  isToday,
-  addMonths,
-  subMonths,
-  startOfDay,
-  getDay,
-} from 'date-fns';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, type Availability, type Booking } from '@/lib/supabase';
 
-interface HourSlot {
-  hour: number;
-  booked: boolean;
-}
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
 
 export default function Calendar() {
   const router = useRouter();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth());
+  const [year, setYear] = useState(now.getFullYear());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [slots, setSlots] = useState<HourSlot[]>([]);
+  const [availability, setAvailability] = useState<Availability[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-  const [startHour, setStartHour] = useState<number | null>(null);
-  const [endHour, setEndHour] = useState<number | null>(null);
+  const [selStart, setSelStart] = useState<number | null>(null);
+  const [selEnd, setSelEnd] = useState<number | null>(null);
+
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  // Build calendar grid
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const prevMonth = () => {
+    if (month === 0) { setMonth(11); setYear(year - 1); }
+    else setMonth(month - 1);
+    setSelectedDate(null);
+  };
+
+  const nextMonth = () => {
+    if (month === 11) { setMonth(0); setYear(year + 1); }
+    else setMonth(month + 1);
+    setSelectedDate(null);
+  };
+
+  const dateStr = (day: number) =>
+    `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+  const isPast = (day: number) => {
+    const d = new Date(year, month, day);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return d < today;
+  };
+
+  // Fetch availability + bookings for selected date
+  const fetchSlots = useCallback(async (date: string) => {
+    setLoadingSlots(true);
+    setSelStart(null);
+    setSelEnd(null);
+    try {
+      const spaceRes = await supabase
+        .from('spaces')
+        .select('id')
+        .eq('slug', process.env.NEXT_PUBLIC_SPACE_SLUG ?? 'basketball-court')
+        .single();
+
+      if (!spaceRes.data) return;
+      const spaceId = spaceRes.data.id;
+
+      const [availRes, bookRes] = await Promise.all([
+        supabase.from('availability').select('*').eq('space_id', spaceId).eq('date', date),
+        supabase.from('bookings').select('*').eq('space_id', spaceId).eq('date', date).neq('status', 'cancelled'),
+      ]);
+
+      setAvailability(availRes.data ?? []);
+      setBookings(bookRes.data ?? []);
+    } catch (e) {
+      console.error('Failed to fetch slots:', e);
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const ms = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
-        const me = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
-        const { data: avail } = await supabase
-          .from('availability').select('date, is_available').gte('date', ms).lte('date', me);
-        const available = new Set<string>();
-        avail?.forEach((a) => { if (a.is_available) available.add(a.date); });
-        setAvailableDates(available);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    load();
-  }, [currentMonth]);
+    if (selectedDate) fetchSlots(selectedDate);
+  }, [selectedDate, fetchSlots]);
 
-  const loadSlots = async (dateStr: string) => {
-    setLoadingSlots(true);
-    setStartHour(null);
-    setEndHour(null);
-    try {
-      const [{ data: av }, { data: bk }] = await Promise.all([
-        supabase.from('availability').select('start_hour, end_hour').eq('date', dateStr).single(),
-        supabase.from('bookings').select('start_hour, end_hour').eq('date', dateStr).in('status', ['pending', 'confirmed']),
-      ]);
-      const s = av?.start_hour ?? 6;
-      const e = av?.end_hour ?? 23;
-      const booked = new Set<number>();
-      bk?.forEach((b) => { for (let h = b.start_hour; h < b.end_hour; h++) booked.add(h); });
-      const result: HourSlot[] = [];
-      for (let h = s; h < e; h++) result.push({ hour: h, booked: booked.has(h) });
-      setSlots(result);
-    } catch { setSlots([]); }
-    finally { setLoadingSlots(false); }
+  // Hour helpers
+  const isBooked = (hour: number) =>
+    bookings.some((b) => hour >= b.start_hour && hour < b.end_hour);
+
+  const isAvailable = (hour: number) => {
+    if (availability.length === 0) return true; // default open
+    return availability.some((a) => a.is_available && hour >= a.start_hour && hour < a.end_hour);
   };
 
-  const handleDateClick = (ds: string) => {
-    if (selectedDate === ds) { setSelectedDate(null); return; }
-    setSelectedDate(ds);
-    loadSlots(ds);
+  const hourOpen = (hour: number) => isAvailable(hour) && !isBooked(hour);
+
+  const toggleHour = (hour: number) => {
+    if (!hourOpen(hour)) return;
+    if (selStart === null) {
+      setSelStart(hour);
+      setSelEnd(hour + 1);
+    } else if (selEnd !== null) {
+      if (hour < selStart) {
+        setSelStart(hour);
+      } else if (hour + 1 > selEnd) {
+        // check contiguous
+        let ok = true;
+        for (let h = selStart; h <= hour; h++) {
+          if (!hourOpen(h)) { ok = false; break; }
+        }
+        if (ok) setSelEnd(hour + 1);
+      } else {
+        // clicking inside range resets
+        setSelStart(hour);
+        setSelEnd(hour + 1);
+      }
+    }
   };
 
-  const handleHourClick = (h: number) => {
-    if (startHour === null) { setStartHour(h); setEndHour(h + 1); }
-    else if (h < startHour) { setStartHour(h); }
-    else { setEndHour(h + 1); }
+  const isInRange = (hour: number) =>
+    selStart !== null && selEnd !== null && hour >= selStart && hour < selEnd;
+
+  const handleBook = () => {
+    if (!selectedDate || selStart === null || selEnd === null) return;
+    router.push(`/book/${selectedDate}?start=${selStart}&end=${selEnd}`);
   };
 
-  const today = startOfDay(new Date());
-  const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
-  const pad = getDay(startOfMonth(currentMonth));
-  const duration = startHour !== null && endHour !== null ? endHour - startHour : 0;
-
-  const fmtHour = (h: number) => {
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const d = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return `${d}:00 ${ampm}`;
-  };
+  const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
 
   return (
-    <div className="w-full" style={{ animation: 'slideUp 0.4s ease-out 0.1s both' }}>
-      {/* Calendar */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        {/* Month nav */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">&#8249;</button>
-          <h3 className="text-sm font-semibold text-slate-900">{format(currentMonth, 'MMMM yyyy')}</h3>
-          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors">&#8250;</button>
+    <div className="w-full flex flex-col items-center gap-6">
+      {/* Calendar Card */}
+      <div className="w-full bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/50 overflow-hidden">
+        {/* Month navigation */}
+        <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-cyan-500 to-teal-500">
+          <button
+            onClick={prevMonth}
+            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <h3 className="text-lg font-bold text-white tracking-wide">
+            {MONTHS[month]} {year}
+          </h3>
+          <button
+            onClick={nextMonth}
+            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 px-3 pt-3">
-          {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => (
-            <div key={d} className="text-center text-[10px] font-semibold text-slate-300 uppercase py-1">{d}</div>
+        <div className="grid grid-cols-7 px-4 pt-4 pb-2">
+          {DAYS.map((d) => (
+            <div key={d} className="text-center text-xs font-semibold text-slate-400 uppercase tracking-wider py-1">
+              {d}
+            </div>
           ))}
         </div>
 
-        {/* Grid */}
-        {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="h-5 w-5 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-7 gap-1 px-3 pb-3">
-            {Array.from({ length: pad }).map((_, i) => <div key={`p-${i}`} />)}
-            {days.map((date) => {
-              const ds = format(date, 'yyyy-MM-dd');
-              const avail = !isBefore(date, today) && availableDates.has(ds);
-              const sel = selectedDate === ds;
-              const isT = isToday(date);
-              return (
-                <button
-                  key={ds}
-                  disabled={!avail}
-                  onClick={() => handleDateClick(ds)}
-                  className={`aspect-square rounded-xl text-xs font-medium flex items-center justify-center relative transition-all duration-150
-                    ${avail
-                      ? sel
-                        ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/30 scale-105'
-                        : isT ? 'bg-cyan-100 text-cyan-700 ring-2 ring-cyan-500 font-bold hover:bg-cyan-200 cursor-pointer' : 'text-slate-900 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
-                      : 'text-slate-300 cursor-default'
-                    }
-                  `}
-                >
-                  {date.getDate()}
-                  
-                </button>
-              );
-            })}
-          </div>
-        )}
+        {/* Day cells */}
+        <div className="grid grid-cols-7 gap-1.5 px-4 pb-5">
+          {cells.map((day, i) => {
+            if (day === null) return <div key={`empty-${i}`} />;
+            const ds = dateStr(day);
+            const isToday = ds === todayStr;
+            const past = isPast(day);
+            const isSelected = ds === selectedDate;
 
-        {/* Legend */}
-        <div className="px-4 py-2.5 border-t border-slate-100 flex gap-5 text-[10px] text-slate-400">
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-500" /> Available</span>
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-200" /> Unavailable</span>
-          <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-cyan-100 ring-1 ring-cyan-500" /> Today</span>
+            return (
+              <button
+                key={ds}
+                disabled={past}
+                onClick={() => setSelectedDate(ds === selectedDate ? null : ds)}
+                className={`
+                  relative aspect-square rounded-2xl text-sm font-semibold transition-all duration-150 flex items-center justify-center
+                  ${past
+                    ? 'text-slate-300 cursor-not-allowed'
+                    : isSelected
+                      ? 'bg-cyan-500 text-white shadow-md shadow-cyan-200 scale-105'
+                      : isToday
+                        ? 'bg-cyan-100 text-cyan-700 ring-2 ring-cyan-400 font-bold hover:bg-cyan-200'
+                        : 'text-slate-700 hover:bg-slate-100 hover:scale-105'
+                  }
+                `}
+              >
+                {day}
+                {isToday && !isSelected && (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Hourly slots */}
+      {/* Hourly Slot Picker — appears when a date is selected */}
       {selectedDate && (
-        <div className="mt-4 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm" style={{ animation: 'slideDown 0.3s ease-out' }}>
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-900">
-                {format(new Date(selectedDate + 'T12:00:00'), 'EEEE, MMMM d')}
-              </h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">Tap hours to select your time</p>
-            </div>
-            <button onClick={() => setSelectedDate(null)} className="text-slate-400 hover:text-slate-600 text-lg px-1">&times;</button>
+        <div className="w-full bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/50 overflow-hidden animate-slide-up">
+          <div className="px-6 py-4 border-b border-slate-100">
+            <h4 className="text-base font-bold text-slate-800">
+              {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h4>
+            <p className="text-sm text-slate-400 mt-0.5">Tap hours to select a time range</p>
           </div>
 
           {loadingSlots ? (
-            <div className="flex justify-center py-10">
-              <div className="h-5 w-5 rounded-full border-2 border-slate-200 border-t-cyan-500 animate-spin" />
+            <div className="flex items-center justify-center py-12">
+              <div className="w-7 h-7 border-3 border-cyan-200 border-t-cyan-500 rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-              {slots.map((slot) => {
-                const inRange = startHour !== null && endHour !== null && slot.hour >= startHour && slot.hour < endHour;
-                return (
-                  <button
-                    key={slot.hour}
-                    disabled={slot.booked}
-                    onClick={() => handleHourClick(slot.hour)}
-                    className={`px-3 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 text-center
-                      ${slot.booked
-                        ? 'bg-slate-50 text-slate-300 cursor-not-allowed line-through'
-                        : inRange
-                          ? 'bg-cyan-500 text-white shadow-sm shadow-cyan-500/20'
-                          : 'bg-slate-50 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 cursor-pointer'
-                      }
-                    `}
-                  >
-                    {fmtHour(slot.hour)}
-                    {slot.booked && <span className="block text-[9px] mt-0.5" style={{ textDecoration: 'none' }}>Booked</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+            <>
+              <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 p-4">
+                {hours.map((h) => {
+                  const open = hourOpen(h);
+                  const booked = isBooked(h);
+                  const inRange = isInRange(h);
+                  const label = `${h > 12 ? h - 12 : h}${h >= 12 ? 'pm' : 'am'}`;
 
-          {/* Summary + continue */}
-          <div className="px-5 py-3 border-t border-slate-100">
-            {duration > 0 ? (
-              <p className="text-xs text-slate-500 mb-2">
-                {fmtHour(startHour!)} – {fmtHour(endHour!)} &middot; <span className="text-slate-900 font-semibold">{duration}h</span>
-              </p>
-            ) : (
-              <p className="text-xs text-slate-400 mb-2">No time selected</p>
-            )}
-            <button
-              disabled={duration === 0}
-              onClick={() => router.push(`/book/${selectedDate}?start=${startHour}&end=${endHour}`)}
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
-                ${duration > 0
-                  ? 'bg-cyan-500 text-white hover:bg-cyan-600 shadow-md shadow-cyan-500/20'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }
-              `}
-            >
-              Continue Booking &rarr;
-            </button>
-          </div>
+                  return (
+                    <button
+                      key={h}
+                      disabled={!open}
+                      onClick={() => toggleHour(h)}
+                      className={`
+                        py-2.5 px-2 rounded-xl text-sm font-semibold transition-all duration-150
+                        ${inRange
+                          ? 'bg-cyan-500 text-white shadow-md shadow-cyan-200 scale-105'
+                          : booked
+                            ? 'bg-red-50 text-red-300 cursor-not-allowed line-through'
+                            : !open
+                              ? 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                              : 'bg-slate-50 text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 hover:scale-105'
+                        }
+                      `}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center justify-center gap-5 px-4 pb-3 pt-1">
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-3 h-3 rounded bg-slate-50 border border-slate-200" /> Available
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-3 h-3 rounded bg-cyan-500" /> Selected
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <span className="w-3 h-3 rounded bg-red-50 border border-red-200" /> Booked
+                </div>
+              </div>
+
+              {/* Confirm button */}
+              {selStart !== null && selEnd !== null && (
+                <div className="px-4 pb-5 pt-2">
+                  <button
+                    onClick={handleBook}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-teal-500 text-white font-bold text-base shadow-lg shadow-cyan-200/50 hover:shadow-xl hover:scale-[1.01] transition-all duration-200"
+                  >
+                    Book {selStart > 12 ? selStart - 12 : selStart}:00{selStart >= 12 ? 'pm' : 'am'} — {selEnd > 12 ? selEnd - 12 : selEnd}:00{selEnd >= 12 ? 'pm' : 'am'} →
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
