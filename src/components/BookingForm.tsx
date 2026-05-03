@@ -222,10 +222,10 @@ export default function BookingForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Customer Information */}
       <div className="card space-y-4">
-        <h3 className="font-semibold text-gray-900">Your Information</h3>
+        <h3 className="font-semibold text-white">Your Information</h3>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             Full Name *
           </label>
           <input
@@ -239,7 +239,7 @@ export default function BookingForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             Email *
           </label>
           <input
@@ -253,7 +253,7 @@ export default function BookingForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             Phone *
           </label>
           <input
@@ -270,7 +270,7 @@ export default function BookingForm({
       {/* Add-ons */}
       {addOns.length > 0 && (
         <div className="card space-y-4">
-          <h3 className="font-semibold text-gray-900">Add-ons</h3>
+          <h3 className="font-semibold text-white">Add-ons</h3>
           {addOns.map((addOn) => (
             <label key={addOn.id} className="flex items-start gap-3 cursor-pointer">
               <input
@@ -280,8 +280,8 @@ export default function BookingForm({
                 className="checkbox mt-1"
               />
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{addOn.name}</p>
-                <p className="text-sm text-gray-600">{addOn.description}</p>
+                <p className="font-medium text-white">{addOn.name}</p>
+                <p className="text-sm text-[#6b6b80]">{addOn.description}</p>
                 <p className="text-sm font-semibold text-cyan-600 mt-1">
                   ${addOn.price.toFixed(2)}
                 </p>
@@ -293,7 +293,7 @@ export default function BookingForm({
 
       {/* Discount Code */}
       <div className="card space-y-4">
-        <h3 className="font-semibold text-gray-900">Discount Code (Optional)</h3>
+        <h3 className="font-semibold text-white">Discount Code (Optional)</h3>
         <div className="flex gap-2">
           <input
             type="text"
@@ -327,7 +327,7 @@ export default function BookingForm({
           )}
         </div>
         {appliedDiscount && (
-          <div className="bg-green-50 p-3 rounded-lg text-sm text-green-800">
+          <div className="bg-emerald-500/10 p-3 rounded-lg text-sm text-green-800">
             Code applied: {appliedDiscount.code}
           </div>
         )}
@@ -335,9 +335,9 @@ export default function BookingForm({
 
       {/* E-transfer Reference */}
       <div className="card space-y-4">
-        <h3 className="font-semibold text-gray-900">E-transfer (If Paid)</h3>
+        <h3 className="font-semibold text-white">E-transfer (If Paid)</h3>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             E-transfer Reference (Optional)
           </label>
           <input
@@ -347,7 +347,7 @@ export default function BookingForm({
             className="input-field"
             placeholder="e.g., TRF-ABC123"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-[#6b6b80] mt-1">
             If paying by e-transfer, provide the reference number for verification
           </p>
         </div>
@@ -355,9 +355,9 @@ export default function BookingForm({
 
       {/* Price Breakdown */}
       <div className="card space-y-3">
-        <h3 className="font-semibold text-gray-900">Price Breakdown</h3>
+        <h3 className="font-semibold text-white">Price Breakdown</h3>
 
-        <div className="space-y-2 border-b border-gray-200 pb-3">
+        <div className="space-y-2 border-b border-[#2a2a3a] pb-3">
           <div className="flex justify-between text-sm">
             <span>Court Rental ({hours} hours)</span>
             <span className="font-medium">${baseTotal.toFixed(2)}</span>
@@ -369,27 +369,27 @@ export default function BookingForm({
             </div>
           )}
           {discountAmount > 0 && (
-            <div className="flex justify-between text-sm text-red-600">
+            <div className="flex justify-between text-sm text-red-400">
               <span>Discount ({appliedDiscount?.code})</span>
               <span className="font-medium">-${discountAmount.toFixed(2)}</span>
             </div>
           )}
         </div>
 
-        <div className="flex justify-between text-lg font-bold text-gray-900">
+        <div className="flex justify-between text-lg font-bold text-white">
           <span>Total</span>
           <span>${total.toFixed(2)}</span>
         </div>
 
         <div className="bg-blue-50 p-3 rounded-lg">
-          <p className="text-sm font-medium text-gray-900">Deposit Required</p>
+          <p className="text-sm font-medium text-white">Deposit Required</p>
           <p className="text-lg font-bold text-cyan-600">${depositAmount.toFixed(2)}</p>
-          <p className="text-xs text-gray-600 mt-1">50% of total (due to confirm booking)</p>
+          <p className="text-xs text-[#6b6b80] mt-1">50% of total (due to confirm booking)</p>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-500/10 border border-red-500/20 text-red-800 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}

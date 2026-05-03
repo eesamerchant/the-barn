@@ -133,16 +133,16 @@ export default function TimeSlotPicker({
     endHour - startHour <= space.max_booking_hours;
 
   if (loading) {
-    return <div className="text-center py-4 text-gray-600">Loading available times...</div>;
+    return <div className="text-center py-4 text-[#6b6b80]">Loading available times...</div>;
   }
 
   return (
     <div className="card space-y-4">
-      <h3 className="font-semibold text-gray-900">Select Time Slot</h3>
+      <h3 className="font-semibold text-white">Select Time Slot</h3>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             Start Hour
           </label>
           <select
@@ -160,7 +160,7 @@ export default function TimeSlotPicker({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-[#e4e4ed] mb-2">
             End Hour
           </label>
           <select
@@ -183,17 +183,17 @@ export default function TimeSlotPicker({
 
       {startHour !== null && endHour !== null && (
         <div className="bg-blue-50 p-3 rounded-lg">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-[#e4e4ed]">
             Duration: {endHour - startHour} hour{endHour - startHour !== 1 ? 's' : ''}
           </p>
           {endHour - startHour < space.min_booking_hours && (
-            <p className="text-sm text-red-600 mt-1">
+            <p className="text-sm text-red-400 mt-1">
               Minimum booking duration is {space.min_booking_hours} hour
               {space.min_booking_hours !== 1 ? 's' : ''}
             </p>
           )}
           {endHour - startHour > space.max_booking_hours && (
-            <p className="text-sm text-red-600 mt-1">
+            <p className="text-sm text-red-400 mt-1">
               Maximum booking duration is {space.max_booking_hours} hour
               {space.max_booking_hours !== 1 ? 's' : ''}
             </p>

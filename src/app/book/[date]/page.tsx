@@ -42,7 +42,7 @@ export default function BookPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-[#6b6b80]">Loading...</p>
       </div>
     );
   }
@@ -51,7 +51,7 @@ export default function BookPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
-          <p className="text-gray-600 text-lg">Could not load space information</p>
+          <p className="text-[#6b6b80] text-lg">Could not load space information</p>
           <button
             onClick={() => router.push('/')}
             className="btn-primary"
@@ -66,17 +66,17 @@ export default function BookPage() {
   const displayDate = format(parse(params.date, 'yyyy-MM-dd', new Date()), 'EEEE, MMMM d, yyyy');
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[#0a0a0f]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => router.push('/')}
-            className="text-cyan-600 hover:text-cyan-700 font-medium mb-4"
+            className="text-cyan-400 hover:text-cyan-300 font-medium mb-4"
           >
             ← Back to Calendar
           </button>
-          <h1 className="text-4xl font-bold text-blue-900">
+          <h1 className="text-4xl font-bold text-white">
             Book for {displayDate}
           </h1>
         </div>
@@ -94,13 +94,13 @@ export default function BookPage() {
               />
             ) : (
               <div className="card space-y-4">
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600 mb-1">Selected Time</p>
-                  <p className="text-2xl font-bold text-green-700">
+                <div className="bg-emerald-500/10 p-4 rounded-lg border border-emerald-500/20">
+                  <p className="text-sm text-[#6b6b80] mb-1">Selected Time</p>
+                  <p className="text-2xl font-bold text-emerald-400">
                     {String(selectedTime.startHour).padStart(2, '0')}:00 -{' '}
                     {String(selectedTime.endHour).padStart(2, '0')}:00
                   </p>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-[#6b6b80] mt-2">
                     {selectedTime.endHour - selectedTime.startHour} hour
                     {selectedTime.endHour - selectedTime.startHour !== 1 ? 's' : ''}
                   </p>

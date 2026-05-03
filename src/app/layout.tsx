@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'The Barn — Book Your Court',
+  title: 'The Barn — Court Booking',
   description: 'Reserve basketball and pickleball court time at The Barn.',
 };
 
@@ -11,24 +11,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="min-h-screen flex flex-col">
         {/* Header */}
-        <header className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-50">
-          <div className="w-full max-w-4xl mx-auto px-6 py-4 flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-              B
+        <header className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-[#2a2a3a]/50">
+          <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-sm font-bold shadow-lg shadow-cyan-500/20">
+              TB
             </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">The Barn</span>
+            <div className="leading-tight">
+              <h1 className="text-sm font-semibold text-white">The Barn</h1>
+              <p className="text-[11px] text-[#6b6b80]">Court Booking</p>
+            </div>
           </div>
         </header>
 
-        {/* Main content — centered */}
-        <main className="flex-1 w-full flex flex-col items-center">
+        {/* Content */}
+        <main className="flex-1 w-full">
           {children}
         </main>
 
         {/* Footer */}
-        <footer className="w-full border-t border-slate-200/60 bg-white/60 backdrop-blur-sm">
-          <div className="w-full max-w-4xl mx-auto px-6 py-6 text-center text-sm text-slate-400">
-            &copy; {new Date().getFullYear()} The Barn &mdash; All rights reserved.
+        <footer className="border-t border-[#2a2a3a]/50 bg-[#0a0a0f]/80">
+          <div className="max-w-3xl mx-auto px-6 py-6 flex items-center justify-between text-[11px] text-[#6b6b80]">
+            <span>&copy; {new Date().getFullYear()} The Barn</span>
+            <span>All rights reserved</span>
           </div>
         </footer>
       </body>
